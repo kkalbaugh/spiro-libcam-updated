@@ -63,8 +63,10 @@ def installService():
         print("Could not make directory (~/.config/systemd/user):", e)
     try:
         with open(os.path.expanduser('~/.config/systemd/user/spiro.service'), 'w') as f:
-            if (os.path.exists('/home/pi/.local/bin/spiro')): exe = '/home/pi/.local/bin/spiro'
-            else: exe = '/usr/local/bin/spiro'
+            if (os.path.exists('/home/pi/.local/bin/spiro')):
+                exe = '/home/pi/.local/bin/spiro'
+            else:
+                exe = '/usr/local/bin/spiro'
             f.write(textwrap.dedent("""\
                 [Unit]
                 Description=SPIRO control software
@@ -86,7 +88,11 @@ def terminate(sig, frame):
         debug("Shut down time-out, force-quitting.")
         debug("If the software locks up at this point, a reboot is needed.")
         debug("This is due to a bug in the underlying camera code.")
-        cam.close()
+        try:
+            if cam:
+                cam.close()
+        except Exception:
+            pass
         sys.exit()
 
     if not shutdown:
@@ -95,12 +101,21 @@ def terminate(sig, frame):
         signal.alarm(10)
 
     log("Signal " + str(sig) + " caught -- shutting down.")
-    if not failed:
-        webui.stop()
-    if cam:
-        cam.close()
-    hw.motorOn(False)
-    hw.cleanup()
+    try:
+        if not failed:
+            webui.stop()
+    except Exception:
+        debug('Failed stopping webui during shutdown', exc_info=True)
+    try:
+        if cam:
+            cam.close()
+    except Exception:
+        pass
+    try:
+        hw.motorOn(False)
+        hw.cleanup()
+    except Exception:
+        pass
     sys.exit()
 
 
@@ -119,8 +134,9 @@ def main():
         print("Clearing all configuration values.")
         try:
             os.remove(os.path.expanduser('~/.config/spiro/spiro.conf'))
-        except OSError as e:
-            print("Could not remove file (~/.config/spiro/spiro.conf):", e.strerror)
+        except Exception as e:
+            # print the full exception for broader compatibility
+            print("Could not remove file (~/.config/spiro/spiro.conf):", e)
             raise
     if options.install:
         print("Installing systemd service file.")
