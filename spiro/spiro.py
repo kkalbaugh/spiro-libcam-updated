@@ -7,7 +7,7 @@
 import os
 import textwrap
 import RPi.GPIO as gpio
-from picamera import PiCamera
+# from picamera import PiCamera
 from spiro.config import Config
 from spiro.hwcontrol import HWControl
 from spiro.logger import log, debug
@@ -43,17 +43,17 @@ parser.add_argument('--disable-rotation', action="store_true", dest="disable_rot
 options = parser.parse_args()
 
 
-def initCam():
-    cam = PiCamera()
-    # cam.framerate dictates longest exposure (1/cam.framerate)
-    cam.framerate = 5
-    cam.iso = 50
-    cam.resolution = cam.MAX_RESOLUTION
-    if cfg.get('rotated_camera'):
-        cam.rotation = 90
-    cam.image_denoise = False
-    hw.focusCam(cfg.get('focus'))
-    return cam
+# def initCam():
+#     cam = PiCamera()
+#     # cam.framerate dictates longest exposure (1/cam.framerate)
+#     cam.framerate = 5
+#     cam.iso = 50
+#     cam.resolution = cam.MAX_RESOLUTION
+#     if cfg.get('rotated_camera'):
+#         cam.rotation = 90
+#     cam.image_denoise = False
+#     hw.focusCam(cfg.get('focus'))
+#     return cam
 
 
 def installService():
@@ -114,6 +114,7 @@ for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGQUIT, signal.SIGHUP, signal
 
 # start here.
 def main():
+    global cam
     if options.reset:
         print("Clearing all configuration values.")
         try:
@@ -150,10 +151,10 @@ def main():
     # no options given, go ahead and start web ui
     try:
         os.chdir(os.path.expanduser('~'))
-        global cam
+        from spiro.camera import cam
         gpio.setmode(gpio.BCM)
         hw.GPIOInit()
-        cam = initCam()
+        # cam = initCam()
         log('Starting web UI.')
         webui.start(cam, hw)
     except Exception as e:

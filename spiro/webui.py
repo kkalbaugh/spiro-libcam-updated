@@ -41,7 +41,7 @@ class Rotator(Thread):
             lock.release()
 
 
-class StreamingOutput(object):
+class StreamingOutput(io.BufferedIOBase):
     def __init__(self):
         self.frame = None
         self.buffer = io.BytesIO()
@@ -59,17 +59,17 @@ class StreamingOutput(object):
         return self.buffer.write(buf)
 
 
-class StillOutput(object):
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
+# class StillOutput(object):
+#     def __init__(self):
+#         self.frame = None
+#         self.buffer = io.BytesIO()
 
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
-            self.buffer.truncate()
-            self.frame = self.buffer.getvalue()
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
+#     def write(self, buf):
+#         if buf.startswith(b'\xff\xd8'):
+#             self.buffer.truncate()
+#             self.frame = self.buffer.getvalue()
+#             self.buffer.seek(0)
+#         return self.buffer.write(buf)
 
 
 class ZoomObject(object):
@@ -220,8 +220,9 @@ def switch_live(value):
     if setLive(value):
         zoomer.set(0.5, 0.5, 1)
     if value == 'on':
-        camera.shutter_speed = 0
-        camera.exposure_mode = "auto"
+        # camera.shutter_speed = 0
+        # camera.exposure_mode = "auto"
+        camera.auto_exposure(True)
     return redirect(url_for('index'))
 
 
@@ -230,12 +231,14 @@ def setLive(val):
     prev = livestream
     if val == 'on' and livestream != True:
         livestream = True
-        camera.resolution = "2592x1944"
-        camera.start_recording(liveoutput, format='mjpeg', resize='1024x768')
+        # camera.resolution = "2592x1944"
+        # camera.start_recording(liveoutput, format='mjpeg', resize='1024x768')
+        camera.start_stream(liveoutput)
     elif val == 'off' and livestream == True:
         livestream = False
-        camera.stop_recording()
-        camera.resolution = camera.MAX_RESOLUTION
+        # camera.stop_recording()
+        # camera.resolution = camera.MAX_RESOLUTION
+        camera.stop_stream()
     return prev != livestream
 
 
@@ -411,19 +414,22 @@ def exposureMode(time):
     if time == 'day':
         camera.iso = cfg.get('dayiso')
         camera.shutter_speed = 1000000 // cfg.get('dayshutter')
-        camera.exposure_mode = "off"
+        # camera.exposure_mode = "off"
+        camera.auto_exposure(False)
         hw.LEDControl(False)
         return redirect(url_for('exposure', time='day'))
     elif time == 'night':
         camera.iso = cfg.get('nightiso')
         camera.shutter_speed = 1000000 // cfg.get('nightshutter')
-        camera.exposure_mode = "off"
+        # camera.exposure_mode = "off"
+        camera.auto_exposure(False)
         hw.LEDControl(True)
         return redirect(url_for('exposure', time='night'))
     elif time == 'auto':
-        camera.shutter_speed = 0
-        camera.iso = 0
-        camera.exposure_mode = "auto"
+        # camera.shutter_speed = 0
+        # camera.iso = 0
+        # camera.exposure_mode = "auto"
+        camera.auto_exposure(True)
         return redirect(url_for('index'))
     abort(404)
 
@@ -465,7 +471,8 @@ def exposure(time):
     else:
         exposureMode(time)
         setLive('on')
-        camera.exposure_mode = "off"
+        # camera.exposure_mode = "off"
+        camera.auto_exposure(True)
 
     if nightshutter:
         ns = 1000000 // nightshutter
